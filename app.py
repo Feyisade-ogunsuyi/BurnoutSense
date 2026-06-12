@@ -95,6 +95,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+@st.cache_resource
 def load_models():
     import os
     base_path = os.path.dirname(os.path.abspath(__file__))

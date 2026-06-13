@@ -95,6 +95,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Load models
 @st.cache_resource
 def load_models():
     import os
@@ -103,6 +104,8 @@ def load_models():
     explainer = joblib.load(os.path.join(base_path, 'shap_explainer.pkl'))
     feature_cols = joblib.load(os.path.join(base_path, 'feature_cols.pkl'))
     return rf_model, explainer, feature_cols
+
+rf_model, explainer, feature_cols = load_models()
 
 # Header
 st.markdown("""

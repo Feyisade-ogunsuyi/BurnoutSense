@@ -90,7 +90,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-DATA_URL = "https://raw.githubusercontent.com/Feyisade-ogunsuyi/burnoutsense/main/mental%20health%20Dataset.csv"
+DATA_URL = "https://raw.githubusercontent.com/Feyisade-ogunsuyi/BurnoutSense/refs/heads/main/mental%20health%20Dataset%20(1).csv"
 
 @st.cache_resource
 def train_model():

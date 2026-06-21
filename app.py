@@ -84,43 +84,42 @@ st.markdown("""
         font-size: 0.85em !important; text-transform: uppercase !important;
         letter-spacing: 1px !important; margin: 0 !important;
     }
+    .info-box {
+        background: linear-gradient(135deg, #e8f4fd, #d1ecf1);
+        border-left: 5px solid #0f3460; border-radius: 12px;
+        padding: 16px 20px; margin: 10px 0;
+    }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-DATA_URL = "https://raw.githubusercontent.com/Feyisade-ogunsuyi/burnoutsense/main/mental%20health%20Dataset.csv"
+DATA_URL = "https://raw.githubusercontent.com/Feyisade-ogunsuyi/BurnoutSense/refs/heads/main/mental%20health%20Dataset%20(1).csv"
 
 @st.cache_resource
 def train_model():
     df = pd.read_csv(DATA_URL)
-
     cols_to_drop = [c for c in ["OT2","WE","WPW","Study","Age"] if c in df.columns]
     df.drop(columns=cols_to_drop, inplace=True)
-
     obj_cols = df.select_dtypes(include="object").columns
     for col in obj_cols:
         df[col] = df[col].replace({"": np.nan, " ": np.nan})
     for col in df.select_dtypes(include="object").columns:
         df[col] = pd.to_numeric(df[col], errors="coerce")
-
     if "qDepressionc" in df.columns:
         df["qDepressionc"] = df["qDepressionc"].apply(
             lambda x: x if pd.isna(x) or 1 <= x <= 5 else np.nan)
     if "OT" in df.columns:
         df["OT"] = df["OT"].fillna(0)
-
     imputer = SimpleImputer(strategy="median")
     df = pd.DataFrame(imputer.fit_transform(df), columns=df.columns)
-
     burnout_cols = [c for c in df.columns if "Burnout" in c]
     depression_cols = [c for c in df.columns if "Depression" in c]
     anxiety_cols = [c for c in df.columns if "Anexity" in c]
     stress_cols = ["q5SQb","q5SQc","q5SQd","q5SQe","q5SQf",
                    "q5SQg","q5SQh","q6SQ","q7SQ","q8SQ","q9SQ"]
     resilience_cols = [c for c in df.columns if "Resilence" in c]
-
     df["BurnoutScore"]         = df[burnout_cols].sum(axis=1)
     df["MentalHealthBurden"]   = (df[depression_cols].sum(axis=1) +
                                    df[anxiety_cols].sum(axis=1) +
@@ -128,25 +127,19 @@ def train_model():
     df["ResilienceProtection"] = df[resilience_cols].sum(axis=1)
     df["BurnoutRisk"]          = pd.qcut(df["BurnoutScore"], q=3,
                                           labels=[0,1,2]).astype(int)
-
     feature_cols = ["Age2","Sex","Married","Smoking","Disease","Educational",
                     "WE2","WPW2","Study2","Ward","Shift","ESh","ES","OT",
                     "MentalHealthBurden","ResilienceProtection"]
-
     X = df[feature_cols]
     y = df["BurnoutRisk"]
-
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42, stratify=y)
-
     smote = SMOTE(random_state=42)
     X_train_s, y_train_s = smote.fit_resample(X_train, y_train)
-
     model = RandomForestClassifier(
         n_estimators=200, max_depth=10,
         class_weight="balanced", random_state=42)
     model.fit(X_train_s, y_train_s)
-
     explainer = shap.TreeExplainer(model)
     return model, explainer, feature_cols
 
@@ -157,16 +150,18 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-with st.spinner("🔄 Loading BurnoutSense model... please wait (first load takes ~30 seconds)"):
+with st.spinner("🔄 Loading BurnoutSense model... please wait"):
     rf_model, explainer, feature_cols = train_model()
 
+# ── SIDEBAR ─────────────────────────────────────────────────
 st.sidebar.markdown("""
 <div style="text-align:center; padding:10px 0 20px 0;">
     <h2 style="color:white; font-size:1.3em; font-weight:800;">📋 Worker Profile</h2>
-    <p style="color:#c8d6e5; font-size:0.85em;">Fill in all fields and click predict</p>
+    <p style="color:#c8d6e5; font-size:0.85em;">Fill in all sections and click predict</p>
 </div>
 """, unsafe_allow_html=True)
 
+# Demographic
 st.sidebar.markdown('<div class="sidebar-section"><p>👤 Demographic</p></div>',
                     unsafe_allow_html=True)
 age2 = st.sidebar.selectbox("Age Group", options=[1,2,3,4,5],
@@ -182,6 +177,7 @@ disease = st.sidebar.selectbox("Chronic Disease", options=[1,2],
 educational = st.sidebar.selectbox("Education Level", options=[1,2,3,4],
     format_func=lambda x: {1:"Diploma",2:"Bachelor",3:"Master",4:"PhD"}[x])
 
+# Occupational
 st.sidebar.markdown('<div class="sidebar-section"><p>💼 Occupational</p></div>',
                     unsafe_allow_html=True)
 we2 = st.sidebar.selectbox("Work Experience", options=[1,2,3,4],
@@ -204,17 +200,105 @@ es = st.sidebar.selectbox("Employment Status", options=[1,2,3,4,5],
 ot = st.sidebar.number_input("Overtime Hours / Month",
     min_value=0, max_value=100, value=0, step=1)
 
-st.sidebar.markdown('<div class="sidebar-section"><p>🧠 Psychological</p></div>',
+# Psychological Questionnaire
+st.sidebar.markdown('<div class="sidebar-section"><p>🧠 Psychological Assessment</p></div>',
                     unsafe_allow_html=True)
-mental_health_burden = st.sidebar.slider(
-    "Mental Health Burden Score", min_value=39, max_value=107, value=62)
-resilience_protection = st.sidebar.slider(
-    "Resilience Protection Score", min_value=25, max_value=110, value=55)
+st.sidebar.markdown("""
+<p style="color:#c8d6e5 !important; font-size:0.8em !important;
+   margin:4px 0 10px 0 !important;">
+Rate each item: 1=Never, 2=Rarely, 3=Sometimes, 4=Often, 5=Always
+</p>""", unsafe_allow_html=True)
+
+st.sidebar.markdown("""
+<p style="color:#e94560 !important; font-size:0.8em !important;
+   font-weight:700 !important; margin:8px 0 4px 0 !important;">
+DEPRESSION
+</p>""", unsafe_allow_html=True)
+d1 = st.sidebar.selectbox("I feel hopeless about the future",
+    options=[1,2,3,4,5], format_func=lambda x:
+    {1:"Never",2:"Rarely",3:"Sometimes",4:"Often",5:"Always"}[x], key="d1")
+d2 = st.sidebar.selectbox("I feel worthless or inadequate",
+    options=[1,2,3,4,5], format_func=lambda x:
+    {1:"Never",2:"Rarely",3:"Sometimes",4:"Often",5:"Always"}[x], key="d2")
+d3 = st.sidebar.selectbox("I have difficulty concentrating",
+    options=[1,2,3,4,5], format_func=lambda x:
+    {1:"Never",2:"Rarely",3:"Sometimes",4:"Often",5:"Always"}[x], key="d3")
+
+st.sidebar.markdown("""
+<p style="color:#e94560 !important; font-size:0.8em !important;
+   font-weight:700 !important; margin:8px 0 4px 0 !important;">
+ANXIETY
+</p>""", unsafe_allow_html=True)
+a1 = st.sidebar.selectbox("I feel nervous or anxious at work",
+    options=[1,2,3,4,5], format_func=lambda x:
+    {1:"Never",2:"Rarely",3:"Sometimes",4:"Often",5:"Always"}[x], key="a1")
+a2 = st.sidebar.selectbox("I experience physical tension or restlessness",
+    options=[1,2,3,4,5], format_func=lambda x:
+    {1:"Never",2:"Rarely",3:"Sometimes",4:"Often",5:"Always"}[x], key="a2")
+a3 = st.sidebar.selectbox("I feel overwhelmed by my responsibilities",
+    options=[1,2,3,4,5], format_func=lambda x:
+    {1:"Never",2:"Rarely",3:"Sometimes",4:"Often",5:"Always"}[x], key="a3")
+
+st.sidebar.markdown("""
+<p style="color:#e94560 !important; font-size:0.8em !important;
+   font-weight:700 !important; margin:8px 0 4px 0 !important;">
+STRESS
+</p>""", unsafe_allow_html=True)
+s1 = st.sidebar.selectbox("I feel unable to cope with my workload",
+    options=[1,2,3,4], format_func=lambda x:
+    {1:"Never",2:"Rarely",3:"Sometimes",4:"Often"}[x], key="s1")
+s2 = st.sidebar.selectbox("I feel emotionally drained after work",
+    options=[1,2,3,4], format_func=lambda x:
+    {1:"Never",2:"Rarely",3:"Sometimes",4:"Often"}[x], key="s2")
+s3 = st.sidebar.selectbox("I feel my work demands are excessive",
+    options=[1,2,3,4], format_func=lambda x:
+    {1:"Never",2:"Rarely",3:"Sometimes",4:"Often"}[x], key="s3")
+
+st.sidebar.markdown("""
+<p style="color:#e94560 !important; font-size:0.8em !important;
+   font-weight:700 !important; margin:8px 0 4px 0 !important;">
+RESILIENCE
+</p>""", unsafe_allow_html=True)
+r1 = st.sidebar.selectbox("I recover well from setbacks at work",
+    options=[1,2,3,4], format_func=lambda x:
+    {1:"Never",2:"Rarely",3:"Sometimes",4:"Often"}[x], key="r1")
+r2 = st.sidebar.selectbox("I feel confident handling difficult situations",
+    options=[1,2,3,4], format_func=lambda x:
+    {1:"Never",2:"Rarely",3:"Sometimes",4:"Often"}[x], key="r2")
+r3 = st.sidebar.selectbox("I maintain focus well under pressure",
+    options=[1,2,3,4], format_func=lambda x:
+    {1:"Never",2:"Rarely",3:"Sometimes",4:"Often"}[x], key="r3")
+
+# Calculate composite scores
+# Scale depression/anxiety to match original dataset ranges
+# Original: DepressionScore range 6-38 (16 items), AnxietyScore 18-71 (18 items)
+# Stress range 11-31 (11 items), Resilience 25-110 (25 items)
+# We scale our 3-item scores proportionally
+
+dep_raw    = d1 + d2 + d3   # range 3-15
+anx_raw    = a1 + a2 + a3   # range 3-15
+stress_raw = s1 + s2 + s3   # range 3-12
+res_raw    = r1 + r2 + r3   # range 3-12
+
+# Scale to original dataset ranges
+dep_scaled    = 6  + (dep_raw - 3)    / 12 * 32  # scaled to 6-38
+anx_scaled    = 18 + (anx_raw - 3)   / 12 * 53  # scaled to 18-71
+stress_scaled = 11 + (stress_raw - 3) / 9  * 20  # scaled to 11-31
+res_scaled    = 25 + (res_raw - 3)   / 9  * 85  # low answers = low resilience
+
+# Scale MentalHealthBurden to training data range (39-107)
+mental_health_burden_raw = dep_scaled + anx_scaled + stress_scaled
+mental_health_burden  = 39 + (mental_health_burden_raw - 39) / 101 * 68
+mental_health_burden  = float(np.clip(mental_health_burden, 39, 107))
+
+# ResilienceProtection already in correct range (25-110)
+resilience_protection = float(np.clip(res_scaled, 25, 110))
 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 predict_btn = st.sidebar.button("🔍  Predict Burnout Risk",
                                  use_container_width=True, type="primary")
 
+# ── MAIN CONTENT ─────────────────────────────────────────────
 if predict_btn:
     input_data = pd.DataFrame({
         "Age2":[age2],"Sex":[sex],"Married":[married],
@@ -237,6 +321,7 @@ if predict_btn:
         2:"This worker shows high burnout indicators. Immediate support is recommended."
     }
 
+    # Risk banner
     st.markdown(f"""
     <div class="{risk_classes[prediction]}">
         <h2 style="color:white; font-size:2em; font-weight:800; margin:0;">
@@ -250,6 +335,22 @@ if predict_btn:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
+    # Show calculated scores
+    st.markdown(f"""
+    <div class="info-box">
+        <p style="color:#0f3460; font-weight:700; margin:0 0 6px 0;">
+            📊 Calculated Psychological Scores
+        </p>
+        <p style="color:#333; margin:0; font-size:0.9em;">
+            Mental Health Burden: <b>{mental_health_burden:.1f}</b> (range 39–107) &nbsp;|&nbsp;
+            Resilience Protection: <b>{resilience_protection:.1f}</b> (range 25–110)
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Metrics
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.markdown(f"""<div class="metric-card">
@@ -274,10 +375,10 @@ if predict_btn:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
+    # Probability breakdown
     st.markdown("""<div class="section-header">
         <h3>📊 Risk Probability Breakdown</h3>
     </div>""", unsafe_allow_html=True)
-
     st.markdown(f"""
     <div style="background:white; border-radius:16px; padding:24px;
                 box-shadow:0 4px 20px rgba(0,0,0,0.08); margin:16px 0;">
@@ -305,30 +406,20 @@ if predict_btn:
     </div>
     """, unsafe_allow_html=True)
 
+    # SHAP
     st.markdown("""<div class="section-header">
         <h3>🔍 Explainable AI — Why This Prediction?</h3>
     </div>""", unsafe_allow_html=True)
 
     shap_vals  = explainer.shap_values(input_data)
     shap_array = np.array(shap_vals)
+    sv = shap_array[0, :, prediction]
 
-    fig, ax = plt.subplots(figsize=(16, 3))
-    shap.force_plot(
-        explainer.expected_value[prediction],
-        shap_array[0, :, prediction],
-        input_data.iloc[0],
-        feature_names=feature_cols,
-        matplotlib=True, show=False
-    )
-    plt.tight_layout()
-    st.pyplot(fig)
-    plt.close()
-
+    # Top factors table
     st.markdown("""<div class="section-header">
         <h3>📋 Top Factors Influencing This Prediction</h3>
     </div>""", unsafe_allow_html=True)
 
-    sv = shap_array[0, :, prediction]
     factors_df = pd.DataFrame({
         "Feature": feature_cols,
         "Worker Value": input_data.iloc[0].values,
@@ -342,6 +433,7 @@ if predict_btn:
     factors_df["SHAP Impact"] = factors_df["SHAP Impact"].round(4)
     st.dataframe(factors_df, use_container_width=True, hide_index=True)
 
+    # Recommendations
     st.markdown("""<div class="section-header">
         <h3>💡 Clinical Recommendations</h3>
     </div>""", unsafe_allow_html=True)
@@ -386,6 +478,8 @@ if predict_btn:
         <p style="color:#888; font-size:0.8em; margin:0; text-align:center;">
             ⚠️ <b>Disclaimer:</b> This system is a decision-support tool only.
             Predictions should not replace clinical judgement or professional assessment.
+            Psychological scores are derived from a simplified 12-item screening tool;
+            full psychometric assessment is recommended for clinical decisions.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -427,9 +521,10 @@ else:
             <h3 style="color:#1a1a2e; font-weight:700;">📌 How to Use</h3>
             <ol style="color:#555; line-height:2;">
                 <li>Enter worker demographic details in the sidebar</li>
-                <li>Fill in occupational and psychological information</li>
+                <li>Fill in occupational information</li>
+                <li>Answer the 12 psychological screening questions</li>
                 <li>Click <b>Predict Burnout Risk</b></li>
-                <li>View the risk level and SHAP explanation</li>
+                <li>View the risk level, scores, and SHAP explanation</li>
                 <li>Follow the clinical recommendations</li>
             </ol>
         </div>""", unsafe_allow_html=True)

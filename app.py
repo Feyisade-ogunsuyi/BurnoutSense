@@ -204,13 +204,13 @@ ot = st.sidebar.number_input("Overtime Hours / Month",
 st.sidebar.markdown('<div class="sidebar-section"><p>🧠 Psychological Assessment</p></div>',
                     unsafe_allow_html=True)
 st.sidebar.markdown("""
-<p style="color:#c8d6e5 !important; font-size:0.8em !important; 
+<p style="color:#c8d6e5 !important; font-size:0.8em !important;
    margin:4px 0 10px 0 !important;">
 Rate each item: 1=Never, 2=Rarely, 3=Sometimes, 4=Often, 5=Always
 </p>""", unsafe_allow_html=True)
 
 st.sidebar.markdown("""
-<p style="color:#e94560 !important; font-size:0.8em !important; 
+<p style="color:#e94560 !important; font-size:0.8em !important;
    font-weight:700 !important; margin:8px 0 4px 0 !important;">
 DEPRESSION
 </p>""", unsafe_allow_html=True)
@@ -275,19 +275,24 @@ r3 = st.sidebar.selectbox("I maintain focus well under pressure",
 # Stress range 11-31 (11 items), Resilience 25-110 (25 items)
 # We scale our 3-item scores proportionally
 
-dep_raw   = d1 + d2 + d3  # range 3-15
-anx_raw   = a1 + a2 + a3  # range 3-15
-stress_raw = s1 + s2 + s3  # range 3-12
-res_raw   = r1 + r2 + r3  # range 3-12
+dep_raw    = d1 + d2 + d3   # range 3-15
+anx_raw    = a1 + a2 + a3   # range 3-15
+stress_raw = s1 + s2 + s3   # range 3-12
+res_raw    = r1 + r2 + r3   # range 3-12
 
 # Scale to original dataset ranges
-dep_scaled   = 6  + (dep_raw - 3)   / 12 * 32   # scaled to 6-38
-anx_scaled   = 18 + (anx_raw - 3)   / 12 * 53   # scaled to 18-71
+dep_scaled    = 6  + (dep_raw - 3)    / 12 * 32  # scaled to 6-38
+anx_scaled    = 18 + (anx_raw - 3)   / 12 * 53  # scaled to 18-71
 stress_scaled = 11 + (stress_raw - 3) / 9  * 20  # scaled to 11-31
-res_scaled   = 25 + (12 - res_raw)  / 9  * 85   # inverted: low resilience answers → high score
+res_scaled    = 25 + (res_raw - 3)   / 9  * 85  # low answers = low resilience
 
-mental_health_burden   = dep_scaled + anx_scaled + stress_scaled
-resilience_protection  = res_scaled
+# Scale MentalHealthBurden to training data range (39-107)
+mental_health_burden_raw = dep_scaled + anx_scaled + stress_scaled
+mental_health_burden  = 39 + (mental_health_burden_raw - 39) / 101 * 68
+mental_health_burden  = float(np.clip(mental_health_burden, 39, 107))
+
+# ResilienceProtection already in correct range (25-110)
+resilience_protection = float(np.clip(res_scaled, 25, 110))
 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 predict_btn = st.sidebar.button("🔍  Predict Burnout Risk",

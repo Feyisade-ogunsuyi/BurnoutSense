@@ -225,7 +225,7 @@ if predict_btn:
     st.markdown("""<div class="section-header"><h3>🔍 Explainable AI — Why This Prediction?</h3></div>""", unsafe_allow_html=True)
     shap_vals  = explainer.shap_values(input_data)
     shap_array = np.array(shap_vals)
-    sv = shap_array[0,:,prediction]
+    sv = shap_array[0,:,2]  # Always use High Risk class for consistent direction
 
     # SHAP bar chart
     fig, ax = plt.subplots(figsize=(10, 6))

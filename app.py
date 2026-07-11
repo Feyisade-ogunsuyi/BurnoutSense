@@ -20,11 +20,6 @@ st.markdown("""
     .main{background-color:#f0f4f8}
     [data-testid="stSidebar"]{background:linear-gradient(180deg,#1a1a2e,#16213e,#0f3460)}
     [data-testid="stSidebar"] *{color:white!important}
-    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] span{color:#000000!important;font-weight:600!important}
-    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] div{color:#000000!important}
-    [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"]{background-color:white!important}
-    [data-testid="stSidebar"] .stSelectbox svg{color:#000000!important}
-    [data-testid="stSidebar"] div[data-baseweb="select"] *{color:#000000!important}
     .header-banner{background:linear-gradient(135deg,#1a1a2e,#0f3460,#e94560);padding:30px 40px;border-radius:16px;margin-bottom:24px;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
     .header-banner h1{color:white;font-size:2.4em;font-weight:800;margin:0}
     .header-banner p{color:#c8d6e5;font-size:1.1em;margin:8px 0 0 0}

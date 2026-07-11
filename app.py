@@ -20,6 +20,11 @@ st.markdown("""
     .main{background-color:#f0f4f8}
     [data-testid="stSidebar"]{background:linear-gradient(180deg,#1a1a2e,#16213e,#0f3460)}
     [data-testid="stSidebar"] *{color:white!important}
+    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] span{color:#000000!important;font-weight:600!important}
+    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] div{color:#000000!important}
+    [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"]{background-color:white!important}
+    [data-testid="stSidebar"] .stSelectbox svg{color:#000000!important}
+    [data-testid="stSidebar"] div[data-baseweb="select"] *{color:#000000!important}
     .header-banner{background:linear-gradient(135deg,#1a1a2e,#0f3460,#e94560);padding:30px 40px;border-radius:16px;margin-bottom:24px;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
     .header-banner h1{color:white;font-size:2.4em;font-weight:800;margin:0}
     .header-banner p{color:#c8d6e5;font-size:1.1em;margin:8px 0 0 0}
@@ -221,6 +226,21 @@ if predict_btn:
     shap_vals  = explainer.shap_values(input_data)
     shap_array = np.array(shap_vals)
     sv = shap_array[0,:,prediction]
+
+    # SHAP bar chart
+    fig, ax = plt.subplots(figsize=(10, 6))
+    colors = ['#e74c3c' if x > 0 else '#27ae60' for x in sv]
+    sorted_idx = np.argsort(np.abs(sv))
+    ax.barh([feature_cols[i] for i in sorted_idx],
+            [sv[i] for i in sorted_idx],
+            color=[colors[i] for i in sorted_idx])
+    ax.axvline(x=0, color='black', linewidth=0.8)
+    ax.set_xlabel('SHAP Value (Impact on Prediction)', fontsize=11)
+    ax.set_title('Feature Contributions to This Prediction', fontsize=12, fontweight='bold')
+    ax.tick_params(axis='y', labelsize=9)
+    plt.tight_layout()
+    st.pyplot(fig)
+    plt.close()
 
     st.markdown("""<div class="section-header"><h3>📋 Top Factors Influencing This Prediction</h3></div>""", unsafe_allow_html=True)
     factors_df = pd.DataFrame({"Feature":feature_cols,"Worker Value":input_data.iloc[0].values,"SHAP Impact":sv})
